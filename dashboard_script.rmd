@@ -1,0 +1,196 @@
+---
+title: "Illegal Dumping in Philadelphia"
+output: 
+  flexdashboard::flex_dashboard:
+    theme:
+      bg: "#ffffff"
+      fg: "#5E2C25"
+      primary: "#C45B4D"
+      base_font:
+        google: Prompt
+      code_font:
+        google: JetBrains Mono
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(sf)
+library(rphl)
+library(plotly)
+library(ggthemr)
+library(tmap)
+library(downloadthis)
+library(RColorBrewer)
+library(scales)
+library(tigris)
+library(monochromeR)
+library(verbaliseR)
+
+options(tigris_use_cache = TRUE)
+
+tmap_options(basemaps = "Esri.WorldGrayCanvas") #set global tmap basemap
+
+ggthemr("pale") #set global ggplot theme
+
+choro_pal = rev(generate_palette("#C45B4D", modification = "go_lighter", n_colours = 5, view_palette = FALSE)) # create palette for choropleth map
+
+map_pal = c("#3262AB", "#C45B4D","#444444")
+
+status_pal = c("Open" = "#C45B4D",
+                "Closed" = "#444444")
+
+#swatch: "#444444" "#de6757" "#EB9050" "#3262AB" "#FF8D7D" "#C8E370" "#C45B4D" "#41a65c" "#5E2C25" "#78695F"
+```
+
+```{r data imports, cache = TRUE, include = FALSE}
+base_url = "https://phl.carto.com/api/v2/sql"
+
+one_year_ago = (lubridate::ymd(Sys.Date()) - lubridate::years(1))
+
+query = sprintf("
+        select *
+        from public_cases_fc
+        where requested_datetime  >= '%s'
+        ", one_year_ago)
+  
+complaints = st_as_sf(get_carto(query,
+                              format = 'csv',
+                              base_url = base_url,
+                              stringsAsFactors = FALSE) |>
+                      filter(service_name == "Illegal Dumping",
+                             !is.na(lat),
+                             !is.na(lon)),
+                      coords = c("lon", "lat"),
+                      crs = st_crs('EPSG:4326')) |>
+                      mutate(requested_datetime = as.Date(requested_datetime),
+                             closed_datetime = as.Date(closed_datetime)) |>
+                      st_transform(crs = st_crs("EPSG:2272")) # will need these to be projected for KDE later
+
+
+complaints$closed_datetime[complaints$closed_datetime == ""] = NA
+
+complaints = complaints |>
+                              mutate(response_time_days = case_when(
+                                                                is.na(closed_datetime) ~ as.numeric(difftime(Sys.Date(), requested_datetime, units = "days")),
+                                                                TRUE ~ as.numeric(difftime(closed_datetime, requested_datetime, units = "days"))
+                                                                  )
+                                                                         )
+
+
+
+
+phl_blocks = st_transform(tracts("PA", "Philadelphia"), crs = st_crs("EPSG:2272"))
+
+phl_response_time = complaints |>
+                        select(response_time_days) |>
+                        aggregate(by = phl_blocks, FUN = mean)
+```
+Column {data-width=200}
+-------------------------------------
+
+### Info
+
+##### About the Dashboard
+This dashboard displays illegal dumping complaints in Philadelphia between `r prettify_date(Sys.Date(), uk_or_us = "US")` and `r prettify_date((lubridate::ymd(Sys.Date()) - lubridate::years(1)), uk_or_us = "US")`. The maps and graphs are interactive and can be filtered by clicking on the relevant areas.
+
+##### Download Data
+To download a list of illegal dumping complaints in Philadelphia in the last year, click the button below:
+\
+\
+\
+```{r download}
+download_this((complaints |>
+               select(address,
+                      status,
+                      subject,
+                      service_name,
+                      agency_responsible,
+                      requested_datetime,
+                      closed_datetime,
+                      response_time_days
+                      )),
+    output_name = "Illegal Dumping Cases in Philadelphia",
+    output_extension = ".xlsx",
+    button_label = "Download Illegal Dumping Cases in Philadelphia",
+    button_type = "warning",
+    has_icon = TRUE,
+    icon = "fa fa-save")
+```
+\
+\
+Dashboard built by [Nissim Lebovits](https://twitter.com/NissimLebovits). For questions, feedback, and more, contact me at nissim@design.upenn.edu.
+
+Column {data-width=600 .tabset}
+-----------------------------------------------------------------------
+
+### Unresolved Illegal Dumping in Philadelphia
+```{r open map}
+tmap_mode('view')
+
+tm_shape(complaints |> filter(status == "Open")) +
+  tm_dots(title = "Complaints",
+          col = 'status',
+          palette = status_pal,
+          alpha = 0.2,
+          id = "address",
+              popup.vars = c("Status" = "status",
+                             "Date Requested" = "requested_datetime",
+                             "Date Closed" = "closed_datetime")) +
+tm_view(view.legend.position = c("right", "bottom"),
+        set.view = 12)
+```
+
+### All Illegal Dumping in Philadelphia
+```{r all map}
+tmap_mode('view')
+
+tm_shape(complaints) +
+  tm_dots(title = "Complaints",
+          col = 'status',
+          palette = status_pal,
+          alpha = 0.2,
+          id = "address",
+              popup.vars = c("Status" = "status",
+                             "Date Requested" = "requested_datetime",
+                             "Date Closed" = "closed_datetime")) +
+tm_view(view.legend.position = c("right", "bottom"),
+        set.view = 12)
+```
+
+Column {data-width=400}
+-----------------------------------------------------------------------
+
+### **Illegal Dumping Reports by Week**
+*Hover over the plot to interact with it. Click the camera icon to download it as a .png file.*
+```{r density}
+ggplotly(
+  ggplot(complaints, aes(x = requested_datetime)) +
+  geom_histogram(alpha = 0.3, fill = "#C45B4D", color = NA, bins = 52)+
+    labs(x = "Date",
+         y = "Count") +
+  theme(legend.position = 'bottom')
+    )
+```
+
+### Average Response Time by Census Block
+```{r response time}
+tmap_mode('view')
+
+tm_shape(phl_response_time) +
+  tm_polygons(
+          title = "Avg. Response Time (Days)",
+          col = 'response_time_days',
+          palette = choro_pal,
+          style = "jenks",
+          border.col = NA,
+          border.alpha = 0,
+          alpha = 0.7,
+          id = "address",
+          textNA = 'NA') +
+tm_view(view.legend.position = c("right", "bottom"),
+            colorNA = 'transparent',
+        set.view = 11)
+```
