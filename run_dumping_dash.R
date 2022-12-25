@@ -12,9 +12,14 @@ library(rsconnect)
 knit('C:/Users/Nissim/Documents/Building Permits for Dante/west_phl_building_permits/illegal_dumping_dash/dashboard_script.Rmd')
 
 # Creates the html output
-render("dashboard_script.md")
+rmarkdown::render("dashboard_script.Rmd")
 
 rpubsUpload(title = "Philadelphia Illegal Dumping Dashboard", 
             contentFile = "dashboard_script.html",
             originalDoc = "dashboard_script.Rmd",
             id = "https://api.rpubs.com/api/v1/document/987075/53a026836c2d4a5a8717a2cb1a45429f")
+
+
+# C:\Program Files\R\R-4.2.1\bin\x64
+
+# C:\Users\Nissim\Documents\Building Permits for Dante\west_phl_building_permits\illegal_dumping_dash\run_dumping_dash.R
