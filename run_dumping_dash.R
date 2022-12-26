@@ -3,6 +3,8 @@ library(knitr)
 library(rmarkdown)
 library(rsconnect)
 
+Sys.setenv(RSTUDIO_PANDOC="C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools")
+
 #https://rpubs.com/arafath/automateR
 #https://www.ericeikrem.com/publishing-rpubs-command-line/
 #https://rdrr.io/github/rstudio/rsconnect/man/rpubsUpload.html
@@ -12,11 +14,11 @@ library(rsconnect)
 knit('C:/Users/Nissim/Documents/Building Permits for Dante/west_phl_building_permits/illegal_dumping_dash/dashboard_script.Rmd')
 
 # Creates the html output
-rmarkdown::render("dashboard_script.Rmd")
+rmarkdown::render('C:/Users/Nissim/Documents/Building Permits for Dante/west_phl_building_permits/illegal_dumping_dash/dashboard_script.Rmd')
 
 rpubsUpload(title = "Philadelphia Illegal Dumping Dashboard", 
-            contentFile = "dashboard_script.html",
-            originalDoc = "dashboard_script.Rmd",
+            contentFile = "C:/Users/Nissim/Documents/Building Permits for Dante/west_phl_building_permits/illegal_dumping_dash/dashboard_script.html",
+            originalDoc = "C:/Users/Nissim/Documents/Building Permits for Dante/west_phl_building_permits/illegal_dumping_dash/dashboard_script.Rmd",
             id = "https://api.rpubs.com/api/v1/document/987075/53a026836c2d4a5a8717a2cb1a45429f")
 
 

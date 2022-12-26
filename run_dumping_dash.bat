@@ -1,1 +1,1 @@
-C:\Users\Nissim\Documents\Building Permits for Dante\west_phl_building_permits\illegal_dumping_dash>"C:\Program Files\R\R-4.2.1\bin\x64\R.exe" CMD BATCH "C:\Users\Nissim\Documents\Building Permits for Dante\west_phl_building_permits\illegal_dumping_dash\run_dumping_dash.R" "C:\Users\Nissim\Documents\Building Permits for Dante\west_phl_building_permits\illegal_dumping_dash\dashboard_script.html"
+"C:\Program Files\R\R-4.2.1\bin\x64\Rscript.exe" "C:\Users\Nissim\Documents\Building Permits for Dante\west_phl_building_permits\illegal_dumping_dash\run_dumping_dash.R"
